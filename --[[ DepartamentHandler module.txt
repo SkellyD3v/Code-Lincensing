@@ -1,0 +1,160 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+local Teams = game:GetService("Teams")
+local DepartmentConfig = require(script.DepartmentConfig)
+local RankConfig       = require(script.RankConfig)
+local FactionConfig    = require(script.FactionConfig)
+
+local DepartmentHandler = {}
+
+local function GetRanksForDepartment(department)
+	for _, container in pairs(RankConfig) do
+		if container[department] then
+			return container[department]
+		end
+	end
+	return nil
+end
+
+function DepartmentHandler:CanSelectDepartment(player, data, department)
+	local cfg = DepartmentConfig[department]
+	if not cfg then return false, "Invalid department" end
+
+	if cfg.Free then return true end
+
+	if cfg.FactionOnly then
+		local faction = FactionConfig[department]
+		if not faction or not faction.UsesGroup then
+			return false, "Faction misconfigured"
+		end
+		if player:GetRankInGroup(faction.GroupId) > 0 then
+			return true
+		end
+		return false, "Not in required group"
+	end
+
+	if cfg.RequiredXP then
+		for dept, xpNeeded in pairs(cfg.RequiredXP) do
+			if (data.XP[dept] or 0) >= xpNeeded then
+				return true
+			end 
+		end
+		return false, "Insufficient XP"
+	end
+
+	return false, "Access denied"
+end
+
+function DepartmentHandler:SetDepartment(player, data, department)
+	local canSelect, reason = self:CanSelectDepartment(player, data, department)
+	if not canSelect then return false, reason end
+
+	data.Department = department
+	
+	data.XP[department] = data.XP[department] or 0
+
+	local cfg = DepartmentConfig[department]
+
+	if cfg.FactionOnly then
+		local faction = FactionConfig[department]
+		if faction and faction.UsesGroup then
+			local groupRank = player:GetRankInGroup(faction.GroupId)
+			data.RankIndex = (faction.GroupRankMap and faction.GroupRankMap[groupRank]) or 1
+		else
+			data.RankIndex = 1
+		end
+
+	elseif cfg.NoRanks then
+		data.RankIndex = 1
+
+	else
+		
+		local ranks      = GetRanksForDepartment(department)
+		local xpPerRank  = cfg.XPPerRank or 100
+		local currentXP  = data.XP[department] or 0
+		local calculated = math.floor(currentXP / xpPerRank) + 1
+		data.RankIndex   = math.clamp(calculated, 1, ranks and #ranks or 1)
+	end
+
+	
+	game.ServerStorage.NameTagUpdate:Fire(player)
+	return true
+end
+
+function DepartmentHandler:AssignTeam(player, department)
+	local team = game:GetService("Teams"):FindFirstChild(department)
+	if team then
+		player.Team    = team
+		player.Neutral = false
+	else
+		warn("DepartmentHandler: No team found for " .. tostring(department))
+	end
+end
+
+function DepartmentHandler:AddXP(player, data, amount)
+	local dept = data.Department
+	local cfg  = DepartmentConfig[dept]
+	if not cfg or cfg.NoRanks or cfg.FactionOnly then return end
+
+	data.XP[dept] = (data.XP[dept] or 0) + amount
+
+	local ranks     = GetRanksForDepartment(dept)
+	local xpPerRank = cfg.XPPerRank or 100
+	local newRank   = math.floor(data.XP[dept] / xpPerRank) + 1
+	data.RankIndex  = math.clamp(newRank, 1, ranks and #ranks or 1)
+
+	game.ServerStorage.NameTagUpdate:Fire(player)
+end
+
+function DepartmentHandler:GetRankName(data)
+	local dept   = data.Department
+	local ranks  = GetRanksForDepartment(dept)
+	if not ranks or #ranks == 0 then return "No Rank" end
+	return ranks[data.RankIndex] or "Unknown Rank"
+end
+
+function DepartmentHandler:GetFactionRank(player, department)
+	local faction = FactionConfig[department]
+	if not faction or not faction.UsesGroup then return nil end
+	local groupRank = player:GetRankInGroup(faction.GroupId)
+	if groupRank == 0 then return nil, "Not in group" end
+	return faction.GroupRankMap and faction.GroupRankMap[groupRank] or 1, groupRank
+end
+
+return DepartmentHandler

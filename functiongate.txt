@@ -1,0 +1,148 @@
+
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+local BoomGateFunctions = {}
+local TweenService = game:GetService("TweenService")
+
+local OPEN_ANGLE = 90
+local TWEEN_TIME = 3
+
+
+local function getGateObject(switch)
+	local gateName = switch.Instance:GetAttribute("GateModel")
+	if not gateName then
+		warn("Missing GateModel attribute on:", switch.Instance.Name)
+		return nil
+	end
+																																																																																																																																																																																																																																																																																																																																																																																													
+	local obj = workspace:FindFirstChild(gateName, true)
+	if not obj then
+		warn("Gate not found:", gateName)
+		return nil
+	end
+
+	return obj
+end
+
+
+local function getRotationOffset(angle)
+	angle = math.rad(angle)
+
+	return CFrame.Angles(0, 0, angle)
+	
+end
+
+local function tweenPivot(object, targetPivot)
+	local value = Instance.new("CFrameValue")
+	value.Value = object:GetPivot()
+
+	local info = TweenInfo.new(
+		TWEEN_TIME,
+		Enum.EasingStyle.Quad,
+		Enum.EasingDirection.Out	
+	)
+
+	value:GetPropertyChangedSignal("Value"):Connect(function()
+		object:PivotTo(value.Value)
+	end)
+
+	local tween = TweenService:Create(value, info, {
+		Value = targetPivot
+	})
+	tween:Play()
+
+	return tween
+end
+
+local function setMoving(object, state)
+	object:SetAttribute("GateMoving", state)
+end
+
+local function isMoving(object)
+	return object:GetAttribute("GateMoving") == true
+end
+
+
+
+function BoomGateFunctions.On(switch)
+	local gate = getGateObject(switch)
+	if not gate then return end
+	if isMoving(gate) then return end
+
+
+	switch:SetLocked(true)
+	setMoving(gate, true)
+
+	
+	if not gate:GetAttribute("ClosedPivot") then
+		gate:SetAttribute("ClosedPivot", gate:GetPivot())
+	end
+
+	local closedPivot = gate:GetAttribute("ClosedPivot")
+	local openPivot = closedPivot * getRotationOffset(OPEN_ANGLE)
+
+	local tween = tweenPivot(gate, openPivot)
+	tween.Completed:Once(function()
+		setMoving(gate, false)
+		switch:SetLocked(false)
+	end)
+
+
+	
+end
+
+function BoomGateFunctions.Off(switch)
+	local gate = getGateObject(switch)
+	if not gate then return end
+	if isMoving(gate) then return end
+
+
+	switch:SetLocked(true)
+	setMoving(gate, true)
+
+	local closedPivot = gate:GetAttribute("ClosedPivot")
+	if not closedPivot then return end
+
+	local tween = tweenPivot(gate, closedPivot)
+	tween.Completed:Once(function()
+		setMoving(gate, false)
+		switch:SetLocked(false)
+	end)
+end
+
+return BoomGateFunctions

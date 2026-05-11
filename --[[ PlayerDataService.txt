@@ -1,0 +1,130 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local DataStore = DataStoreService:GetDataStore("PlayerDepartmentData_V2")
+
+local PlayerDataService = {}
+local PlayerData = {}
+
+local DEFAULT_DATA = {
+	Department = "Rig Security",
+	XP = {
+		["Rig Security"] = 0,
+		["Rig Maintenance Team"] = 0,
+		["Logistical Operations Team"] = 0,
+		["Rig Operations Team"] = 0,
+		["Ground Service Personnel"] = 0,
+		Corporate = 0,
+		["Rig Administration"] = 0,
+	},
+	RankIndex = 1,
+}
+
+local function Copy(tbl)
+	local copy = {}
+	for k, v in pairs(tbl) do
+		copy[k] = type(v) == "table" and Copy(v) or v
+	end
+	return copy
+end
+
+function PlayerDataService:LoadPlayer(player)
+	local success, saved = pcall(function()
+		return DataStore:GetAsync(player.UserId)
+	end)
+
+	local data
+	if success and saved then
+		data = Copy(DEFAULT_DATA)
+		data.Department = saved.Department or data.Department
+		data.RankIndex = saved.RankIndex or data.RankIndex
+		if saved.XP then
+			for dept, xp in pairs(saved.XP) do
+				data.XP[dept] = xp
+			end
+		end
+	else
+		data = Copy(DEFAULT_DATA)
+	end
+
+	PlayerData[player] = data
+	return data
+end
+
+function PlayerDataService:SavePlayer(player)
+	local data = PlayerData[player]
+	if not data then
+		return
+	end
+
+	local toSave = {
+		Department = data.Department,
+		RankIndex = data.RankIndex,
+		XP = {},
+	}
+	for dept, xp in pairs(data.XP) do
+		toSave.XP[dept] = xp
+	end
+
+	pcall(function()
+		DataStore:SetAsync(player.UserId, toSave)
+	end)
+end
+
+function PlayerDataService:Get(player)
+	return PlayerData[player]
+end
+
+function PlayerDataService:Remove(player)
+	PlayerData[player] = nil
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	PlayerDataService:SavePlayer(player)
+	PlayerDataService:Remove(player)
+end)
+
+game:BindToClose(function()
+	for player in pairs(PlayerData) do
+		PlayerDataService:SavePlayer(player)
+	end
+end)
+
+return PlayerDataService

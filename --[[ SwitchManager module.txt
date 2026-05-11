@@ -1,0 +1,74 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+local SwitchBase = require(script.Parent.SwitchBase)
+local CollectionService = game:GetService("CollectionService")
+
+local SwitchManager = {}
+SwitchManager.SwitchObjects = {}
+
+
+function SwitchManager:InitializeSwitch(instance)
+	local config = {}
+	
+	-- config stuff
+	config.Locked = instance:GetAttribute("Locked") or false
+	config.ButtonDelay = instance:GetAttribute("ButtonDelay") or 4
+	local target
+	if instance.Parent:FindFirstChild("Target") then
+		target = instance.Parent.Target.CFrame
+	else
+		target = instance.CFrame * CFrame.new(0, 0, -1)
+	end
+	config.TargetCFrame = target
+	
+	-- running function
+	local functionName = instance:GetAttribute("FunctionModule")
+	if functionName then
+		config.FunctionModule = require(script.Parent[functionName])
+	end
+	
+	local switch = SwitchBase.new(instance, config)
+	self.SwitchObjects[instance] = switch
+end
+
+function SwitchManager:GetSwitch(instance)
+	return self.SwitchObjects[instance]
+end
+
+return SwitchManager

@@ -1,0 +1,108 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+
+local Players = game:GetService("Players")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local shared_folder = replicatedStorage:FindFirstChild("Shared")
+local dataman = shared_folder:FindFirstChild("DataManagement")
+
+
+local PlayerDataService = require(dataman.PlayerDataService)
+local DepartmentHandler = require(dataman.DepartmentHandler)
+
+local NameTagTemplate = ServerStorage:WaitForChild("NameTag")
+local UpdateEvent = ServerStorage.NameTagUpdate
+
+--// functions
+
+local function SetupNameTag(player, character)
+	local head = character:WaitForChild("Head")
+
+	local old = head:FindFirstChild("NameTag")
+	if old then old:Destroy() end
+
+	local tag = NameTagTemplate:Clone()
+	tag.Name = "NameTag"
+	tag.Parent = head
+	tag.Adornee = head
+
+	local data = PlayerDataService:Get(player)
+
+	tag.PlayerName.Text = player.Name
+	tag.Team.Text = data.Department
+	tag.TeamRank.Text = DepartmentHandler:GetRankName(data)
+
+	if player.Team then
+		tag.Team.TextColor3 = player.Team.TeamColor.Color
+	end
+end
+
+local function UpdateNameTag(player)
+	if not player then return end
+	if not player.Character then return end
+	local head = player.Character:FindFirstChild("Head")
+	if not head then return end
+	local tag = head:FindFirstChild("NameTag")
+	if not tag then return end
+	local data = PlayerDataService:Get(player)
+	if not data then return end
+	tag.Team.Text = data.Department
+	tag.TeamRank.Text = DepartmentHandler:GetRankName(data)
+	if player.Team then
+		tag.Team.TextColor3 = player.Team.TeamColor.Color
+	end
+end
+
+UpdateEvent.Event:Connect(UpdateNameTag)
+
+Players.PlayerAdded:Connect(function(player)
+
+	local data = PlayerDataService:LoadPlayer(player)
+
+	player.CharacterAdded:Connect(function(character)
+		task.wait(0.5)
+
+		DepartmentHandler:SetDepartment(player, data, data.Department)
+		DepartmentHandler:AssignTeam(player, data.Department)
+
+		SetupNameTag(player, character)
+	end)
+end)

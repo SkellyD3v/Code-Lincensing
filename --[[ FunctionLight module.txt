@@ -1,0 +1,77 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+local LightFunctions = {}
+
+local function getLightsFromFolder(folderName)
+	local folder = workspace:FindFirstChild(folderName, true)
+	if not folder then
+		warn("Light folder '" .. folderName .. "' not found.")
+		return {}
+	end
+
+	local foundLights = {}
+
+	for _, obj in ipairs(folder:GetDescendants()) do
+		if obj:IsA("Light") then
+			table.insert(foundLights, obj)
+		end
+	end
+
+	return foundLights
+end
+
+function LightFunctions.On(instance)
+	local folderName = instance:GetAttribute("LightGroup")
+	if not folderName then return end
+
+	for _, light in ipairs(getLightsFromFolder(folderName)) do
+		light.Enabled = true
+	end
+end
+
+function LightFunctions.Off(instance)
+	local folderName = instance:GetAttribute("LightGroup")
+	if not folderName then return end
+
+	for _, light in ipairs(getLightsFromFolder(folderName)) do
+		light.Enabled = false
+	end
+end
+
+return LightFunctions

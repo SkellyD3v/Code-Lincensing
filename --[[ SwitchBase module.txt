@@ -1,0 +1,217 @@
+--[[
+    ================================================================================
+    LEGAL NOTICE: INTELLECTUAL PROPERTY & COPYRIGHT
+    ================================================================================
+    COPYRIGHT (C) 2025-2026 Adam S. "dddwdefe" . ALL RIGHTS RESERVED.
+    
+    LICENSE: 
+    Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International 
+    (CC BY-NC-ND 4.0)
+    
+    TERMS OF USE:
+    1. PROHIBITION OF COMMERCIAL USE: 
+       This software and its source code may not be used for any commercial 
+       purposes. This includes, but is not limited to, incorporation into 
+       experiences that utilize monetization (Gamepasses, Developer Products, 
+       Paid Access, or Premium Payouts).
+       
+    2. PROHIBITION OF DERIVATIVE WORKS: 
+       You may not distribute, host, or execute this code if it has been 
+       modified, transformed, or built upon in any way.
+       
+    3. OWNERSHIP & BACKUPS: 
+       In the absence of a signed Intellectual Property Transfer Agreement, 
+       the author retains full moral and legal copyright. This ownership and 
+       the restrictions of this license extend to all previous versions, 
+       backups, iterations, and fragments of the source code.
+    
+    NOTICE: 
+    Any unauthorized use, reproduction, or distribution of this work without 
+    the express written consent of the author will result in a formal Digital 
+    Millennium Copyright Act (DMCA) Takedown Notice filed against the asset 
+    and/or the Experience.
+    
+    Full License Legal Code: 
+    https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+    ================================================================================
+]]
+
+local SwitchBase = {}
+SwitchBase.__index = SwitchBase
+
+local TweenService = game:GetService("TweenService")
+
+function SwitchBase.new(instance, config)
+	local self = setmetatable({}, SwitchBase)
+
+	self.Instance = instance
+	self.Locked = config.Locked or false
+	self.State = false
+	self.FunctionModule = config.FunctionModule
+	self.SwitchType = instance:GetAttribute("SwitchType") or "Button"
+	self.OriginalMaterial = nil
+	self.OriginalColor = nil
+	self.ButtonDelay = config.ButtonDelay or 4
+
+	self.LeverOffset = Vector3.new(0, 0, -0.2) -- will be replaced with targetcframe
+	self.TargetCFrame = config.TargetCFrame or self.OriginalCFrame * CFrame.new(0, 0, -1) --change this for the target cframe of the lever
+	self.LeverTweenTime = 0.15 --change this for the duration of the tween
+	self.LeverTweenStyle = Enum.EasingStyle.Quad --change this for the easingstyle of the tween
+	self.LeverTweenDirection = Enum.EasingDirection.Out --change this for the easingdirection of the tween
+
+	self.OriginalCFrame = instance.CFrame
+	
+	return self
+end
+
+function SwitchBase:ApplySwitchVisual(on)
+	if self.SwitchType ~= "Switch" then return end
+	
+	local part = self.Instance
+	
+	if not self.OriginalMaterial then
+		self.OriginalMaterial = part.Material
+	end
+	
+	if not self.OriginalColor then
+		self.OriginalColor = part.Color
+	end
+	
+	if on then
+		part.Material = Enum.Material.Neon
+		part.Color = Color3.new(0, 1, 0)
+	else
+		part.Material = self.OriginalMaterial
+		part.Color = Color3.new(1, 0, 0)
+		--part.Color = self.OriginalColor
+	end
+end
+
+function SwitchBase:ButtonTurnOff()
+	if self.Locked then return end
+	self.State = false
+
+	self:ActivateButton(false)
+
+	if self.FunctionModule and self.FunctionModule.Off then
+		self.FunctionModule.Off(self)
+	end
+end
+
+function SwitchBase:ActivateButton(isOn)
+	if self.SwitchType ~= "Button" then return end
+
+	local part = self.Instance
+
+	if not self.OriginalColor then
+		self.OriginalColor = part.Color
+	end
+	if not self.OriginalMaterial then
+		self.OriginalMaterial = part.Material
+	end
+	
+	local info = TweenInfo.new(self.LeverTweenTime,self.LeverTweenStyle,self.LeverTweenDirection)
+	
+	if isOn then
+		if self.FunctionModule and self.FunctionModule.On then 
+			self.FunctionModule.On(self)
+			part.Material = Enum.Material.Neon
+
+			TweenService:Create(part, info, { CFrame = self.TargetCFrame }):Play()
+		end
+		
+		task.delay(self.ButtonDelay, function()
+			if self.State == true then
+				self:ButtonTurnOff()
+				part.Color = self.OriginalColor
+				part.Material = self.OriginalMaterial
+				TweenService:Create(part, info, { CFrame = self.OriginalCFrame }):Play()
+			end
+		end)
+	end
+end
+function SwitchBase:MoveLever(isOn)
+	if self.SwitchType ~= "Lever" then return end
+
+	local part = self.Instance
+	local target
+
+	if isOn then
+		target = self.TargetCFrame
+	else
+		target = self.OriginalCFrame
+	end
+
+	local info = TweenInfo.new(self.LeverTweenTime,self.LeverTweenStyle,self.LeverTweenDirection)
+
+	TweenService:Create(part, info, { CFrame = target }):Play()
+end
+
+function SwitchBase:MoveToggle(isOn)
+	if self.SwitchType ~= "Toggle" then return end
+
+	local part = self.Instance
+	local target
+
+	if isOn then
+		target = self.TargetCFrame
+		if part.Parent:FindFirstChild("Light") then
+			part.Parent.Light.Color = Color3.fromRGB(255, 255, 255)
+		end
+	elseif not isOn then
+		target = self.OriginalCFrame
+		if part.Parent:FindFirstChild("Light") then
+			part.Parent.Light.Color = Color3.fromRGB(0, 0, 0)
+		end
+	end
+
+	local info = TweenInfo.new(self.LeverTweenTime,self.LeverTweenStyle,self.LeverTweenDirection)
+
+	TweenService:Create(part, info, { CFrame = target }):Play()
+end
+
+function SwitchBase:SetLocked(state)
+	self.Locked = state
+end
+
+function SwitchBase:TurnOn()
+	if self.Locked then return end
+	self.State = true
+
+	self:ApplySwitchVisual(true)
+	self:MoveLever(true)
+	self:ActivateButton(true)
+	self:MoveToggle(true)
+	
+	if self.FunctionModule and self.FunctionModule.On then
+		self.FunctionModule.On(self)
+	end
+end
+
+function SwitchBase:TurnOff()
+	if self.Locked or self.SwitchType == "Button" then return end
+	self.State = false
+
+	self:ApplySwitchVisual(false)
+	self:MoveLever(false)
+	self:ActivateButton(false)
+	self:MoveToggle(false)
+
+	if self.FunctionModule and self.FunctionModule.Off then
+		self.FunctionModule.Off(self)
+
+	end
+end
+
+
+function SwitchBase:Toggle()
+	if self.Locked then return end
+	
+	if self.State then
+		self:TurnOff()
+	else
+		self:TurnOn()
+	end
+end
+
+return SwitchBase
