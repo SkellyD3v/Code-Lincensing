@@ -16,3 +16,9 @@ Modification (Derivatives): Sharing, publishing, or distributing any modified ve
 Sublicensing: Attempting to claim ownership or re-license this work to third parties.
 
 https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+DMCA Compliance & Enforcement
+This repository is the Official Authorized Source. Any unauthorized use of this code on the Roblox platform—including previous versions, backups, or modified iterations—will be met with an immediate DMCA Takedown Request filed with Roblox Corporation.
+
+Note to Roblox Staff/Moderators:
+This repository serves as definitive proof of authorship. While this archive was created on the date shown, the source code was authored and finalized in the months prior during the project's development phase. The license applied here explicitly revokes any implied permission for commercial use by studios, groups, or third parties who do not possess a signed Intellectual Property (IP) Transfer Agreement from the author.
